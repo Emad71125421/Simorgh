@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>باشگاه مشتریان سیمرغ</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#20241D; --muted:#6E7566; --bg:#FBF9F2; --card:#F0EEE0;
+    --card-line:#DCD9C4; --pistachio:#7C9A5C; --pistachio-dark:#5E7844;
+    --gold:#B8863C; --white:#FFFFFB; --dark:#1E2A1A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Vazirmatn',sans-serif;padding-bottom:80px;}
+  .header{background:var(--dark);color:var(--white);padding:26px 18px 40px;border-radius:0 0 28px 28px;}
+  .header h1{font-size:20px;margin:0 0 4px;}
+  .header p{margin:0;color:#C9D6BE;font-size:13px;}
+  .points-card{background:var(--white);margin:-28px 16px 0;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.08);}
+  .points-num{font-size:30px;font-weight:800;color:var(--pistachio-dark);}
+  .progress-bar{background:var(--card-line);height:10px;border-radius:6px;overflow:hidden;margin:10px 0 6px;}
+  .progress-fill{background:var(--pistachio);height:100%;}
+  .progress-label{font-size:12px;color:var(--muted);}
+  main{max-width:480px;margin:0 auto;padding:16px;}
+  .section-title{font-size:15px;font-weight:700;margin:18px 4px 10px;}
+  .referral-box{background:var(--card);border:1px solid var(--card-line);border-radius:14px;padding:14px;font-size:13px;}
+  .referral-link{word-break:break-all;color:var(--pistachio-dark);font-weight:600;margin:6px 0;}
+  .copy-btn{background:var(--pistachio);color:var(--white);border:none;border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;}
+  .product{background:var(--card);border:1px solid var(--card-line);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .product-name{font-weight:700;font-size:14px;}
+  .product-price{color:var(--pistachio-dark);font-size:13px;font-weight:600;margin-top:2px;}
+  .buy-btn{background:var(--pistachio-dark);color:var(--white);border:none;border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;}
+  .order-item{background:var(--card);border:1px solid var(--card-line);border-radius:14px;padding:12px 14px;margin-bottom:10px;font-size:13px;}
+  .status-tag{display:inline-block;padding:3px 9px;border-radius:8px;font-size:11px;margin-top:4px;}
+  .status-awaiting_payment{background:#F3E3B8;color:#7A5A0C;}
+  .status-pending_review{background:#DCEAF6;color:#265E85;}
+  .status-confirmed{background:#DCEFD6;color:#2E6B24;}
+  .status-rejected{background:#F5D9D6;color:#8B2E24;}
+  .nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);display:flex;border-top:1px solid var(--card-line);}
+  .nav button{flex:1;background:none;border:none;padding:12px 0;font-family:inherit;font-size:12px;color:var(--muted);}
+  .nav button.active{color:var(--pistachio-dark);font-weight:700;}
+  .overlay{position:fixed;inset:0;background:rgba(20,20,10,0.45);display:none;align-items:flex-end;z-index:30;}
+  .overlay.open{display:flex;}
+  .sheet{background:var(--bg);width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto;}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:12px 0 5px;}
+  input{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--card-line);font-family:inherit;font-size:14px;background:var(--white);color:var(--ink);}
+  .submit-btn{width:100%;margin-top:16px;padding:13px;border:none;border-radius:12px;background:var(--pistachio-dark);color:var(--white);font-family:inherit;font-weight:700;font-size:14px;}
+  .hidden{display:none;}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>باشگاه مشتریان سیمرغ</h1>
+  <p id="userGreeting">در حال بارگذاری...</p>
+</div>
+
+<div class="points-card">
+  <div class="points-num" id="pointsNum">۰</div>
+  <div style="font-size:13px;color:var(--muted);">امتیاز شما</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel">۰ / ۵۰۰ تا جایزه بعدی</div>
+</div>
+
+<main>
+  <div id="tab-home">
+    <p class="section-title">لینک دعوت اختصاصی شما</p>
+    <div class="referral-box">
+      برای هر دوست که با این لینک بیاد و خرید کنه، ۵۰ امتیاز می‌گیری.
+      <div class="referral-link" id="referralLink">...</div>
+      <button class="copy-btn" id="copyLink">کپی لینک</button>
+    </div>
+
+    <p class="section-title">خرید زعفرون</p>
+    <div id="productList"></div>
+  </div>
+
+  <div id="tab-orders" class="hidden">
+    <p class="section-title">تاریخچه سفارش‌ها</p>
+    <div id="ordersList"></div>
+  </div>
+
+  <div id="tab-rewards" class="hidden">
+    <p class="section-title">جایزه‌ها</p>
+    <div id="rewardsList"></div>
+  </div>
+</main>
+
+<div class="nav">
+  <button class="active" data-tab="home">خانه</button>
+  <button data-tab="orders">سفارش‌ها</button>
+  <button data-tab="rewards">جایزه‌ها</button>
+</div>
+
+<div class="overlay" id="orderOverlay">
+  <div class="sheet">
+    <div id="stepInvoice">
+      <p class="section-title">فاکتور سفارش</p>
+      <div id="invoiceDetails" style="font-size:13px;line-height:2;"></div>
+      <p class="section-title">پرداخت</p>
+      <p style="font-size:13px;">مبلغ رو به شماره کارت زیر واریز کن:</p>
+      <div id="cardInfo" style="background:var(--card);border-radius:10px;padding:12px;font-weight:700;text-align:center;"></div>
+
+      <label>شماره پیگیری تراکنش</label>
+      <input id="paymentRef" type="text" placeholder="مثلاً 123456789">
+
+      <label>عکس رسید پرداخت</label>
+      <input id="receiptFile" type="file" accept="image/*">
+
+      <button class="submit-btn" id="submitReceipt">ارسال رسید برای بررسی</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "https://simorgh-production-bb95.up.railway.app/api";
+const tg = window.Telegram?.WebApp;
+let TOKEN = null;
+let CURRENT_ORDER = null;
+
+const fmt = n => n.toLocaleString('fa-IR');
+
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  if (TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+  if (opts.body && !(opts.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(API_BASE + path, { ...opts, headers });
+  if (!res.ok) throw new Error("api_error_" + res.status);
+  return res.json();
+}
+
+async function init() {
+  try { tg?.ready(); tg?.expand(); } catch (e) {}
+
+  if (!tg || !tg.initData) {
+    document.getElementById('userGreeting').textContent = 'این صفحه باید از داخل تلگرام باز شود';
+    return;
+  }
+
+  const authRes = await api("/auth/telegram", {
+    method: "POST",
+    body: JSON.stringify({ initData: tg.initData }),
+  });
+  TOKEN = authRes.token;
+
+  const me = await api("/me");
+  document.getElementById('userGreeting').textContent = me.name ? `سلام ${me.name} 👋` : 'خوش اومدی 👋';
+  document.getElementById('pointsNum').textContent = fmt(me.points);
+  const pct = Math.round((me.progress.current / me.progress.target) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${fmt(me.progress.current)} / ${fmt(me.progress.target)} تا جایزه بعدی`;
+  document.getElementById('referralLink').textContent = me.referral_link;
+
+  document.getElementById('copyLink').onclick = () => {
+    navigator.clipboard?.writeText(me.referral_link);
+    tg?.HapticFeedback?.notificationOccurred?.('success');
+  };
+
+  const products = await api("/orders/products");
+  const list = document.getElementById('productList');
+  list.innerHTML = '';
+  products.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'product';
+    row.innerHTML = `
+      <div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">${fmt(p.price)} تومان</div>
+      </div>
+      <button class="buy-btn" data-id="${p.id}">خرید</button>`;
+    row.querySelector('button').onclick = () => startOrder(p.id);
+    list.appendChild(row);
+  });
+
+  loadOrders();
+  loadRewards();
+}
+
+async function startOrder(productId) {
+  const order = await api("/orders", {
+    method: "POST",
+    body: JSON.stringify({ items: [{ productId, qty: 1 }] }),
+  });
+  CURRENT_ORDER = order;
+  document.getElementById('invoiceDetails').innerHTML =
+    `شماره فاکتور: ${order.invoice_number}<br>مبلغ قابل پرداخت: <b>${fmt(order.total_amount)} تومان</b>`;
+  document.getElementById('cardInfo').textContent = `${order.bank_card_number} — ${order.bank_card_holder}`;
+  document.getElementById('orderOverlay').classList.add('open');
+}
+
+document.getElementById('submitReceipt').onclick = async () => {
+  const ref = document.getElementById('paymentRef').value.trim();
+  const file = document.getElementById('receiptFile').files[0];
+  if (!ref || !file) { alert('شماره پیگیری و عکس رسید الزامی است'); return; }
+
+  const fd = new FormData();
+  fd.append('payment_reference', ref);
+  fd.append('receipt', file);
+
+  await fetch(`${API_BASE}/orders/${CURRENT_ORDER.order_id}/receipt`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + TOKEN },
+    body: fd,
+  });
+
+  document.getElementById('orderOverlay').classList.remove('open');
+  alert('سفارش شما ثبت شد و منتظر بررسی است.');
+  loadOrders();
+};
+
+async function loadOrders() {
+  const orders = await api("/orders/mine");
+  const el = document.getElementById('ordersList');
+  if (orders.length === 0) { el.innerHTML = '<p class="empty">هنوز سفارشی ثبت نکردی</p>'; return; }
+  el.innerHTML = orders.map(o => `
+    <div class="order-item">
+      <div>${o.invoice_number} — ${fmt(o.total_amount)} تومان</div>
+      <span class="status-tag status-${o.status}">${statusLabel(o.status)}</span>
+    </div>`).join('');
+}
+
+async function loadRewards() {
+  const rewards = await api("/rewards/mine");
+  const el = document.getElementById('rewardsList');
+  if (rewards.length === 0) { el.innerHTML = '<p class="empty">هنوز جایزه‌ای نداری</p>'; return; }
+  el.innerHTML = rewards.map(r => `
+    <div class="order-item">
+      <div>جایزه زعفرون</div>
+      <span class="status-tag status-${r.status === 'fulfilled' ? 'confirmed' : 'pending_review'}">${r.status}</span>
+    </div>`).join('');
+}
+
+function statusLabel(s) {
+  return { awaiting_payment: 'در انتظار پرداخت', pending_review: 'در حال بررسی', confirmed: 'تأیید شده', rejected: 'رد شده' }[s] || s;
+}
+
+document.querySelectorAll('.nav button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['home','orders','rewards'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
+    });
+  };
+});
+
+init().catch(e => {
+  console.error(e);
+  document.getElementById('userGreeting').textContent = 'خطا در اتصال به سرور';
+});
+</script>
+</body>
+</html>
