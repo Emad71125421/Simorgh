@@ -44,7 +44,8 @@
   .overlay.open{display:flex;}
   .sheet{background:var(--bg);width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto;}
   label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:12px 0 5px;}
-  input{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--card-line);font-family:inherit;font-size:14px;background:var(--white);color:var(--ink);}
+  input,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--card-line);font-family:inherit;font-size:14px;background:var(--white);color:var(--ink);}
+  textarea{resize:vertical;min-height:56px;}
   .submit-btn{width:100%;margin-top:16px;padding:13px;border:none;border-radius:12px;background:var(--pistachio-dark);color:var(--white);font-family:inherit;font-weight:700;font-size:14px;}
   .hidden{display:none;}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
@@ -109,7 +110,17 @@
       <label>عکس رسید پرداخت</label>
       <input id="receiptFile" type="file" accept="image/*">
 
-      <button class="submit-btn" id="submitReceipt">ارسال رسید برای بررسی</button>
+      <p class="section-title">اطلاعات گیرنده</p>
+      <label>نام و نام خانوادگی</label>
+      <input id="custName" type="text" placeholder="مثلاً: سارا احمدی">
+
+      <label>شماره تماس</label>
+      <input id="custPhone" type="tel" placeholder="۰۹۱۲۳۴۵۶۷۸۹">
+
+      <label>آدرس کامل ارسال</label>
+      <textarea id="custAddress" placeholder="استان، شهر، خیابان، پلاک، واحد..."></textarea>
+
+      <button class="submit-btn" id="submitReceipt">ارسال سفارش برای بررسی</button>
     </div>
   </div>
 </div>
@@ -155,6 +166,9 @@ async function init() {
   document.getElementById('progressLabel').textContent = `${fmt(me.progress.current)} / ${fmt(me.progress.target)} تا جایزه بعدی`;
   document.getElementById('referralLink').textContent = me.referral_link;
 
+  if (me.phone) document.getElementById('custPhone').value = me.phone;
+  if (me.name) document.getElementById('custName').value = me.name;
+
   document.getElementById('copyLink').onclick = () => {
     navigator.clipboard?.writeText(me.referral_link);
     tg?.HapticFeedback?.notificationOccurred?.('success');
@@ -195,11 +209,19 @@ async function startOrder(productId) {
 document.getElementById('submitReceipt').onclick = async () => {
   const ref = document.getElementById('paymentRef').value.trim();
   const file = document.getElementById('receiptFile').files[0];
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+
   if (!ref || !file) { alert('شماره پیگیری و عکس رسید الزامی است'); return; }
+  if (!name || !phone || !address) { alert('نام، شماره تماس و آدرس الزامی است'); return; }
 
   const fd = new FormData();
   fd.append('payment_reference', ref);
   fd.append('receipt', file);
+  fd.append('customer_name', name);
+  fd.append('customer_phone', phone);
+  fd.append('shipping_address', address);
 
   await fetch(`${API_BASE}/orders/${CURRENT_ORDER.order_id}/receipt`, {
     method: 'POST',
