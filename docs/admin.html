@@ -22,6 +22,7 @@
   #loginBox input{width:100%;padding:10px;margin-bottom:10px;border-radius:8px;border:1px solid #ccc;}
   #loginBox button{width:100%;padding:10px;background:#5E7844;color:#fff;border:none;border-radius:8px;}
   img.receipt{max-width:60px;max-height:60px;border-radius:6px;cursor:pointer;}
+  .addr{max-width:160px;white-space:normal;font-size:12px;color:#555;}
 </style>
 </head>
 <body>
@@ -44,9 +45,9 @@
     </div>
 
     <div id="tab-orders">
-      <input class="search" placeholder="جستجو (شماره فاکتور، نام، آیدی تلگرام)" oninput="loadOrders(this.value)">
+      <input class="search" placeholder="جستجو (فاکتور، نام، تلفن، آیدی تلگرام)" oninput="loadOrders(this.value)">
       <table>
-        <thead><tr><th>فاکتور</th><th>کاربر</th><th>مبلغ</th><th>مرجع پرداخت</th><th>رسید</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <thead><tr><th>فاکتور</th><th>گیرنده</th><th>تماس</th><th>آدرس</th><th>مبلغ</th><th>مرجع پرداخت</th><th>رسید</th><th>وضعیت</th><th>عملیات</th></tr></thead>
         <tbody id="ordersBody"></tbody>
       </table>
     </div>
@@ -111,7 +112,9 @@ async function loadOrders(q) {
   document.getElementById('ordersBody').innerHTML = rows.map(o => `
     <tr>
       <td>${o.invoice_number}</td>
-      <td>${o.user_name || ''}<br><small>${o.telegram_user_id}</small></td>
+      <td>${o.customer_name || '-'}</td>
+      <td>${o.customer_phone || '-'}</td>
+      <td class="addr">${o.shipping_address || '-'}</td>
       <td>${fmt(o.total_amount)}</td>
       <td>${o.payment_reference || '-'}</td>
       <td>${o.receipt_image ? `<img class="receipt" src="${API_BASE}/orders/${o.id}/receipt-image?t=${TOKEN}" onclick="window.open(this.src)">` : '-'}</td>
