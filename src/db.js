@@ -1,7 +1,11 @@
 const path = require("path");
+const fs = require("fs");
 const Database = require("better-sqlite3");
 
-const db = new Database(path.join(__dirname, "..", "data", "simorgh.db"));
+const dataDir = path.join(__dirname, "..", "data");
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const db = new Database(path.join(dataDir, "simorgh.db"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
@@ -60,14 +64,13 @@ CREATE TABLE IF NOT EXISTS rewards (
 );
 `);
 
-// اضافه کردن ستون‌های جدید به دیتابیس‌هایی که قبلاً ساخته شدن (بدون خطا اگه از قبل وجود داشته باشن)
 const newColumns = [
   "ALTER TABLE orders ADD COLUMN customer_name TEXT",
   "ALTER TABLE orders ADD COLUMN customer_phone TEXT",
   "ALTER TABLE orders ADD COLUMN shipping_address TEXT",
 ];
 for (const stmt of newColumns) {
-  try { db.exec(stmt); } catch (e) { /* ستون از قبل وجود داره، مشکلی نیست */ }
+  try { db.exec(stmt); } catch (e) { /* ستون از قبل وجود داره */ }
 }
 
 module.exports = db;
