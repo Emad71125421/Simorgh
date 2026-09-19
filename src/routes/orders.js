@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const db = require("../db");
 const products = require("../products");
@@ -32,6 +33,7 @@ const upload = multer({
 
 router.get("/products", (req, res) => res.json(products));
 
+// ---- کاربر: ساخت سفارش ----
 router.post("/", requireAuth, (req, res) => {
   const { items } = req.body;
   if (!Array.isArray(items) || items.length === 0) {
@@ -63,6 +65,7 @@ router.post("/", requireAuth, (req, res) => {
   });
 });
 
+// ---- کاربر: آپلود رسید ----
 router.post("/:id/receipt", requireAuth, upload.single("receipt"), (req, res) => {
   const order = db.prepare("SELECT * FROM orders WHERE id = ? AND user_id = ?").get(req.params.id, req.userId);
   if (!order) return res.status(404).json({ error: "not_found" });
@@ -76,6 +79,7 @@ router.post("/:id/receipt", requireAuth, upload.single("receipt"), (req, res) =>
   res.json({ ok: true });
 });
 
+// ---- کاربر: تاریخچه سفارش‌ها ----
 router.get("/mine", requireAuth, (req, res) => {
   const rows = db
     .prepare("SELECT id, invoice_number, products, total_amount, status, created_at, confirmed_at FROM orders WHERE user_id = ? ORDER BY id DESC")
@@ -83,6 +87,7 @@ router.get("/mine", requireAuth, (req, res) => {
   res.json(rows.map((r) => ({ ...r, products: JSON.parse(r.products) })));
 });
 
+// ---- ادمین: لیست سفارش‌ها ----
 router.get("/", requireAdmin, (req, res) => {
   const { status, q } = req.query;
   let sql = `SELECT o.*, u.name as user_name, u.telegram_user_id FROM orders o JOIN users u ON u.id = o.user_id WHERE 1=1`;
@@ -100,12 +105,21 @@ router.get("/", requireAdmin, (req, res) => {
   res.json(rows.map((r) => ({ ...r, products: JSON.parse(r.products) })));
 });
 
-router.get("/:id/receipt-image", requireAdmin, (req, res) => {
+// ---- ادمین: دیدن عکس رسید (توکن از query string، چون <img> نمی‌تونه هدر بفرسته) ----
+router.get("/:id/receipt-image", (req, res) => {
+  try {
+    const payload = jwt.verify(req.query.t, process.env.JWT_SECRET);
+    if (payload.role !== "admin") return res.status(401).end();
+  } catch (e) {
+    return res.status(401).end();
+  }
+
   const order = db.prepare("SELECT receipt_image FROM orders WHERE id = ?").get(req.params.id);
   if (!order || !order.receipt_image) return res.status(404).end();
   res.sendFile(path.join(uploadDir, order.receipt_image));
 });
 
+// ---- ادمین: تأیید سفارش ----
 router.post("/:id/approve", requireAdmin, (req, res) => {
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
   if (!order) return res.status(404).json({ error: "not_found" });
@@ -139,6 +153,7 @@ router.post("/:id/approve", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- ادمین: رد سفارش ----
 router.post("/:id/reject", requireAdmin, (req, res) => {
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
   if (!order) return res.status(404).json({ error: "not_found" });
