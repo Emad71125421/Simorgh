@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل ادمین سیمرغ</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#F7F5EC;margin:0;color:#1E2A1A;}
+  header{background:#1E2A1A;color:#fff;padding:16px 20px;}
+  main{max-width:900px;margin:0 auto;padding:16px;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .tabs button{padding:8px 14px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;}
+  .tabs button.active{background:#5E7844;color:#fff;border-color:#5E7844;}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;font-size:13px;}
+  th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:right;}
+  th{background:#F0EEE0;}
+  .btn{padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-size:12px;margin-left:4px;}
+  .approve{background:#5E7844;color:#fff;}
+  .reject{background:#B23B33;color:#fff;}
+  .search{margin-bottom:10px;padding:8px;width:100%;max-width:300px;border-radius:8px;border:1px solid #ccc;}
+  #loginBox{max-width:320px;margin:60px auto;background:#fff;padding:20px;border-radius:10px;}
+  #loginBox input{width:100%;padding:10px;margin-bottom:10px;border-radius:8px;border:1px solid #ccc;}
+  #loginBox button{width:100%;padding:10px;background:#5E7844;color:#fff;border:none;border-radius:8px;}
+  img.receipt{max-width:60px;max-height:60px;border-radius:6px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h3>ورود ادمین</h3>
+  <input id="loginUser" placeholder="نام کاربری">
+  <input id="loginPass" type="password" placeholder="رمز عبور">
+  <button onclick="login()">ورود</button>
+  <p id="loginError" style="color:red;font-size:13px;"></p>
+</div>
+
+<div id="app" style="display:none;">
+  <header><h2>پنل ادمین — باشگاه مشتریان سیمرغ</h2></header>
+  <main>
+    <div class="tabs">
+      <button class="active" data-tab="orders">سفارش‌ها</button>
+      <button data-tab="users">کاربران</button>
+      <button data-tab="rewards">جایزه‌ها</button>
+    </div>
+
+    <div id="tab-orders">
+      <input class="search" placeholder="جستجو (شماره فاکتور، نام، آیدی تلگرام)" oninput="loadOrders(this.value)">
+      <table>
+        <thead><tr><th>فاکتور</th><th>کاربر</th><th>مبلغ</th><th>مرجع پرداخت</th><th>رسید</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+
+    <div id="tab-users" style="display:none;">
+      <input class="search" placeholder="جستجو کاربر" oninput="loadUsers(this.value)">
+      <table>
+        <thead><tr><th>نام</th><th>آیدی تلگرام</th><th>تلفن</th><th>کد معرف</th><th>امتیاز</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+
+    <div id="tab-rewards" style="display:none;">
+      <table>
+        <thead><tr><th>کاربر</th><th>نوع جایزه</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <tbody id="rewardsBody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+const API_BASE = "https://simorgh-production-bb95.up.railway.app/api";
+let TOKEN = localStorage.getItem('simorgh_admin_token') || null;
+
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  if (TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+  if (opts.body) headers["Content-Type"] = "application/json";
+  const res = await fetch(API_BASE + path, { ...opts, headers });
+  if (!res.ok) throw new Error("api_error_" + res.status);
+  return res.json();
+}
+
+async function login() {
+  try {
+    const r = await api('/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: document.getElementById('loginUser').value,
+        password: document.getElementById('loginPass').value,
+      }),
+    });
+    TOKEN = r.token;
+    localStorage.setItem('simorgh_admin_token', TOKEN);
+    showApp();
+  } catch (e) {
+    document.getElementById('loginError').textContent = 'ورود ناموفق';
+  }
+}
+
+function showApp() {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadOrders(); loadUsers(); loadRewards();
+}
+
+const fmt = n => n.toLocaleString('fa-IR');
+
+async function loadOrders(q) {
+  const rows = await api('/orders' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+  document.getElementById('ordersBody').innerHTML = rows.map(o => `
+    <tr>
+      <td>${o.invoice_number}</td>
+      <td>${o.user_name || ''}<br><small>${o.telegram_user_id}</small></td>
+      <td>${fmt(o.total_amount)}</td>
+      <td>${o.payment_reference || '-'}</td>
+      <td>${o.receipt_image ? `<img class="receipt" src="${API_BASE}/orders/${o.id}/receipt-image?t=${TOKEN}" onclick="window.open(this.src)">` : '-'}</td>
+      <td>${o.status}</td>
+      <td>
+        ${o.status === 'pending_review' ? `
+          <button class="btn approve" onclick="decide(${o.id},'approve')">تأیید</button>
+          <button class="btn reject" onclick="decide(${o.id},'reject')">رد</button>` : '-'}
+      </td>
+    </tr>`).join('');
+}
+
+async function decide(id, action) {
+  await api(`/orders/${id}/${action}`, { method: 'POST' });
+  loadOrders(); loadUsers();
+}
+
+async function loadUsers(q) {
+  const rows = await api('/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+  document.getElementById('usersBody').innerHTML = rows.map(u => `
+    <tr><td>${u.name || '-'}</td><td>${u.telegram_user_id}</td><td>${u.phone || '-'}</td><td>${u.referral_code}</td><td>${fmt(u.points)}</td></tr>
+  `).join('');
+}
+
+async function loadRewards() {
+  const rows = await api('/rewards');
+  document.getElementById('rewardsBody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.user_name || ''} <small>${r.telegram_user_id}</small></td>
+      <td>${r.reward_type}</td>
+      <td>${r.status}</td>
+      <td>
+        <select onchange="setRewardStatus(${r.id}, this.value)">
+          <option value="pending" ${r.status==='pending'?'selected':''}>pending</option>
+          <option value="fulfilled" ${r.status==='fulfilled'?'selected':''}>fulfilled</option>
+          <option value="cancelled" ${r.status==='cancelled'?'selected':''}>cancelled</option>
+        </select>
+      </td>
+    </tr>`).join('');
+}
+
+async function setRewardStatus(id, status) {
+  await api(`/rewards/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+}
+
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['orders','users','rewards'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === btn.dataset.tab ? 'block' : 'none';
+    });
+  };
+});
+
+if (TOKEN) showApp();
+</script>
+</body>
+</html>
